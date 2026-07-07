@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeroVault - Investment Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .glass-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.06); }
+        .gradient-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; transition: all 0.3s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(245,158,11,0.3); }
+        .plan-card { transition: all 0.3s; border: 1px solid rgba(255,255,255,0.06); }
+        .plan-card:hover { transform: translateY(-5px); border-color: rgba(245,158,11,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .progress-bar { background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); height: 100%; border-radius: 999px; transition: width 0.5s; }
+        .stat-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.06); }
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-active { border-bottom: 2px solid #f59e0b; color: #fbbf24; }
+        .tab-inactive { color: #94a3b8; }
+        .tab-inactive:hover { color: #e2e8f0; }
+        input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+        .error-msg { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; }
+        .success-msg { color: #22c55e; font-size: 0.875rem; margin-top: 0.25rem; }
+        .live-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Live Stats Ticker -->
+    <div class="glass border-b border-white/5 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm">
+            <div class="flex items-center gap-2"><span class="live-dot"></span><span class="text-slate-400">Online:</span><span class="font-semibold text-emerald-400" id="ticker-online">247</span></div>
+            <div class="flex items-center gap-2"><span class="text-slate-400">Total Deposits:</span><span class="font-semibold text-amber-400" id="ticker-deposits">$45,280</span></div>
+            <div class="flex items-center gap-2"><span class="text-slate-400">Total Withdrawals:</span><span class="font-semibold text-emerald-400" id="ticker-withdrawals">$28,450</span></div>
+            <div class="flex items-center gap-2"><span class="text-slate-400">Active Users:</span><span class="font-semibold text-blue-400" id="ticker-users">1,247</span></div>
+            <div class="flex items-center gap-2"><span class="text-slate-400">Running:</span><span class="font-semibold text-purple-400" id="ticker-days">36 Days</span></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="glass border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg">⚔️</div>
+                <div><h1 class="text-xl font-bold gradient-text">HeroVault</h1><p class="text-xs text-slate-400">Passive Income Platform</p></div>
+            </div>
+            <div class="flex items-center gap-3" id="nav-buttons">
+                <button id="btn-owner-panel" class="hidden px-4 py-2 rounded-lg bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition text-sm font-medium" onclick="showOwnerPanel()">
+                    <i class="fas fa-shield-alt mr-2"></i>Owner Panel
+                </button>
+                <button id="btn-logout" class="hidden px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition text-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- LOGIN / SIGNUP PAGE -->
+        <div id="page-login" class="fade-in">
+            <div class="max-w-md mx-auto">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-3xl mx-auto mb-4">⚔️</div>
+                    <h2 class="text-3xl font-bold mb-2">Welcome to HeroVault</h2>
+                    <p class="text-slate-400">Sign in to start investing and earning passive income</p>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex mb-6 border-b border-white/10">
+                    <button id="tab-login" class="flex-1 py-3 text-sm font-medium tab-active" onclick="switchAuthTab('login')">Login</button>
+                    <button id="tab-signup" class="flex-1 py-3 text-sm font-medium tab-inactive" onclick="switchAuthTab('signup')">Create Account</button>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <!-- LOGIN FORM -->
+                    <div id="form-login">
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Email Address</label>
+                            <input type="email" id="login-email" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500" placeholder="you@example.com">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Password</label>
+                            <div class="relative">
+                                <input type="password" id="login-password" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 pr-10" placeholder="Enter your password">
+                                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300" onclick="togglePassword('login-password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="login-error" class="error-msg mb-4 hidden"></div>
+                        <button onclick="handleEmailLogin()" class="w-full btn-primary py-3 rounded-xl font-semibold text-sm mb-4">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Login
+                        </button>
+
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+                            <div class="relative flex justify-center text-xs"><span class="px-3 bg-slate-900 text-slate-500">or continue with</span></div>
+                        </div>
+
+                        <!-- Google Sign In -->
+                        <div id="g_id_onload" data-client_id="436868480711-4jq0n4pvdcon49fr6l9ngep1dr7i7ad5.apps.googleusercontent.com" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
+                        <div class="g_id_signin w-full" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left" data-width="100%"></div>
+
+
+                    </div>
+
+                    <!-- SIGNUP FORM -->
+                    <div id="form-signup" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Full Name</label>
+                            <input type="text" id="signup-name" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500" placeholder="John Doe">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Email Address</label>
+                            <input type="email" id="signup-email" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500" placeholder="you@example.com">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Password</label>
+                            <div class="relative">
+                                <input type="password" id="signup-password" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 pr-10" placeholder="Min 6 characters">
+                                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300" onclick="togglePassword('signup-password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-slate-400 mb-2">Confirm Password</label>
+                            <input type="password" id="signup-confirm" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500" placeholder="Confirm password">
+                        </div>
+                        <div id="signup-error" class="error-msg mb-4 hidden"></div>
+                        <div id="signup-success" class="success-msg mb-4 hidden"></div>
+                        <button onclick="handleEmailSignup()" class="w-full btn-primary py-3 rounded-xl font-semibold text-sm mb-4">
+                            <i class="fas fa-user-plus mr-2"></i>Create Account
+                        </button>
+
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+                            <div class="relative flex justify-center text-xs"><span class="px-3 bg-slate-900 text-slate-500">or sign up with</span></div>
+                        </div>
+
+                        <div class="g_id_signin w-full" data-type="standard" data-size="large" data-theme="outline" data-text="signup_with" data-shape="rectangular" data-logo_alignment="left" data-width="100%"></div>
+
+
+                    </div>
+                </div>
+
+                <!-- Trust badges -->
+                <div class="mt-8 grid grid-cols-3 gap-4 text-center">
+                    <div class="glass-card rounded-xl p-3">
+                        <div class="text-amber-400 text-lg font-bold">$1-$15</div>
+                        <div class="text-xs text-slate-400">10% daily</div>
+                    </div>
+                    <div class="glass-card rounded-xl p-3">
+                        <div class="text-amber-400 text-lg font-bold">$40+</div>
+                        <div class="text-xs text-slate-400">40% daily</div>
+                    </div>
+                    <div class="glass-card rounded-xl p-3">
+                        <div class="text-amber-400 text-lg font-bold">$500-$1K</div>
+                        <div class="text-xs text-slate-400">70% daily</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PAGE -->
+        <div id="page-dashboard" class="hidden fade-in">
+            <!-- User Info Bar -->
+            <div class="glass-card rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <img id="user-avatar" src="" alt="" class="w-12 h-12 rounded-full bg-slate-700 hidden">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg" id="user-avatar-letter">?</div>
+                    <div>
+                        <h3 class="font-semibold" id="user-name">User</h3>
+                        <p class="text-xs text-slate-400" id="user-email">email@example.com</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400">Balance</div>
+                        <div class="text-2xl font-bold text-amber-400" id="user-balance">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referral Section -->
+            <div class="glass-card rounded-2xl p-5 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="font-semibold text-amber-400"><i class="fas fa-users mr-2"></i>Your Referral Link</h3>
+                        <p class="text-xs text-slate-400 mt-1">Earn 10% lifetime + 20% one-time bonus on $50+ referrals</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="ref-link" readonly class="px-3 py-2 rounded-lg bg-slate-800/50 border border-white/10 text-xs text-slate-300 w-48 sm:w-64" value="">
+                        <button onclick="copyRefLink()" class="px-3 py-2 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/30 hover:bg-amber-600/30 transition text-xs font-medium">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="text-center p-3 rounded-xl bg-slate-800/30">
+                        <div class="text-lg font-bold text-white" id="ref-count">0</div>
+                        <div class="text-xs text-slate-400">Referrals</div>
+                    </div>
+                    <div class="text-center p-3 rounded-xl bg-slate-800/30">
+                        <div class="text-lg font-bold text-emerald-400" id="ref-lifetime">$0.00</div>
+                        <div class="text-xs text-slate-400">Lifetime Earnings</div>
+                    </div>
+                    <div class="text-center p-3 rounded-xl bg-slate-800/30">
+                        <div class="text-lg font-bold text-amber-400" id="ref-bonus">$0.00</div>
+                        <div class="text-xs text-slate-400">Bonus Earnings</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investment Plans -->
+            <div class="mb-6">
+                <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+                    <h2 class="text-2xl font-bold">Investment Plans</h2>
+                    <div class="flex gap-2">
+                        <button onclick="filterPlans('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-600/20 text-amber-400 border border-amber-500/30 plan-filter active" data-filter="all">All</button>
+                        <button onclick="filterPlans('starter')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700/50 text-slate-300 border border-white/10 plan-filter" data-filter="starter">Starter</button>
+                        <button onclick="filterPlans('growth')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700/50 text-slate-300 border border-white/10 plan-filter" data-filter="growth">Growth</button>
+                        <button onclick="filterPlans('premium')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700/50 text-slate-300 border border-white/10 plan-filter" data-filter="premium">Premium</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="plans-grid"></div>
+            </div>
+
+            <!-- My Investments -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-chart-line mr-2 text-amber-400"></i>My Dashboard</h2>
+                <div id="investments-list" class="space-y-4"></div>
+                <div id="no-investments" class="glass-card rounded-2xl p-8 text-center">
+                    <div class="text-5xl mb-4">🎒</div>
+                    <h3 class="text-lg font-semibold mb-2">No active investments yet</h3>
+                    <p class="text-slate-400 text-sm mb-4">Choose a plan above to start earning passive income</p>
+                </div>
+            </div>
+
+            <!-- Withdraw Section -->
+            <div class="glass-card rounded-2xl p-6 mb-6">
+                <h3 class="font-semibold mb-4"><i class="fas fa-wallet mr-2 text-emerald-400"></i>Withdraw</h3>
+                <div class="flex flex-wrap items-end gap-4">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs text-slate-400 mb-2">Amount (USD)</label>
+                        <input type="number" id="withdraw-amount" class="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white" placeholder="0.00" min="1" step="0.01">
+                    </div>
+                    <button onclick="requestWithdrawal()" class="btn-primary px-6 py-3 rounded-xl font-semibold text-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>Request Withdrawal
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-3"><i class="fas fa-clock mr-1"></i>Processing time: 1-24 hours</p>
+            </div>
+
+            <!-- Withdrawal History -->
+            <div class="mb-6">
+                <h3 class="font-semibold mb-3"><i class="fas fa-history mr-2 text-slate-400"></i>Withdrawal History</h3>
+                <div id="withdrawal-history" class="space-y-2"></div>
+                <div id="no-withdrawals" class="text-center text-slate-500 text-sm py-4">No withdrawals yet</div>
+            </div>
+        </div>
+
+        <!-- OWNER PANEL -->
+        <div id="page-owner" class="hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold"><i class="fas fa-shield-alt mr-2 text-red-400"></i>Owner Panel</h2>
+                <button onclick="showDashboard()" class="px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </button>
+            </div>
+
+            <!-- Owner Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="stat-card rounded-2xl p-4">
+                    <div class="text-xs text-slate-400 mb-1">Total Deposits</div>
+                    <div class="text-xl font-bold text-amber-400" id="admin-total-deposits">$0</div>
+                </div>
+                <div class="stat-card rounded-2xl p-4">
+                    <div class="text-xs text-slate-400 mb-1">Total Withdrawals</div>
+                    <div class="text-xl font-bold text-emerald-400" id="admin-total-withdrawals">$0</div>
+                </div>
+                <div class="stat-card rounded-2xl p-4">
+                    <div class="text-xs text-slate-400 mb-1">Active Users</div>
+                    <div class="text-xl font-bold text-blue-400" id="admin-active-users">0</div>
+                </div>
+                <div class="stat-card rounded-2xl p-4">
+                    <div class="text-xs text-slate-400 mb-1">Pending Withdrawals</div>
+                    <div class="text-xl font-bold text-red-400" id="admin-pending">0</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-white/10 mb-4">
+                <button onclick="showAdminTab('deposits')" class="px-4 py-2 text-sm font-medium tab-active" id="admin-tab-deposits">Deposits</button>
+                <button onclick="showAdminTab('withdrawals')" class="px-4 py-2 text-sm font-medium tab-inactive" id="admin-tab-withdrawals">Withdrawals</button>
+                <button onclick="showAdminTab('users')" class="px-4 py-2 text-sm font-medium tab-inactive" id="admin-tab-users">Users</button>
+                <button onclick="showAdminTab('referrals')" class="px-4 py-2 text-sm font-medium tab-inactive" id="admin-tab-referrals">Referrals</button>
+            </div>
+
+            <!-- Deposits Table -->
+            <div id="admin-deposits" class="glass-card rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/50"><tr><th class="px-4 py-3 text-left text-slate-400 font-medium">User</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Plan</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Amount</th><th class="px-4 py-3 text-left text-slate-400 font-medium">ROI</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Date</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Status</th></tr></thead>
+                        <tbody id="admin-deposits-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Withdrawals Table -->
+            <div id="admin-withdrawals" class="glass-card rounded-2xl overflow-hidden hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/50"><tr><th class="px-4 py-3 text-left text-slate-400 font-medium">User</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Amount</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Requested</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Status</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Action</th></tr></thead>
+                        <tbody id="admin-withdrawals-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div id="admin-users" class="glass-card rounded-2xl overflow-hidden hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/50"><tr><th class="px-4 py-3 text-left text-slate-400 font-medium">User</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Email</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Deposited</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Earned</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Withdrawn</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Balance</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Plans</th></tr></thead>
+                        <tbody id="admin-users-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Referrals Table -->
+            <div id="admin-referrals" class="glass-card rounded-2xl overflow-hidden hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/50"><tr><th class="px-4 py-3 text-left text-slate-400 font-medium">Referrer</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Referred</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Invested</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Lifetime Rate</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Bonus</th><th class="px-4 py-3 text-left text-slate-400 font-medium">Total Paid</th></tr></thead>
+                        <tbody id="admin-referrals-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 px-6 py-3 rounded-xl glass-card text-sm font-medium transform translate-y-20 opacity-0 transition-all duration-300 z-50"></div>
+
+    <script>
+        // ==================== CONFIG ====================
+        const OWNER_EMAIL = 'parsh6015@gmail.com';
+        const RUNNING_DAYS = 36;
+        const START_DATE = new Date('2026-06-01');
+
+        // ==================== PLANS ====================
+        const plans = [
+            { id: 'rookie', name: 'Rookie', icon: '🌱', price: 1, dailyRoi: 0.10, color: 'from-green-500 to-emerald-600', tier: 'starter' },
+            { id: 'novice', name: 'Novice', icon: '🔰', price: 5, dailyRoi: 0.10, color: 'from-blue-500 to-cyan-600', tier: 'starter' },
+            { id: 'apprentice', name: 'Apprentice', icon: '🎒', price: 10, dailyRoi: 0.10, color: 'from-indigo-500 to-purple-600', tier: 'starter' },
+            { id: 'journeyman', name: 'Journeyman', icon: '⚒️', price: 15, dailyRoi: 0.10, color: 'from-purple-500 to-pink-600', tier: 'starter' },
+            { id: 'adept', name: 'Adept', icon: '🧿', price: 40, dailyRoi: 0.40, color: 'from-amber-500 to-orange-600', tier: 'growth' },
+            { id: 'expert', name: 'Expert', icon: '💠', price: 100, dailyRoi: 0.40, color: 'from-orange-500 to-red-600', tier: 'growth' },
+            { id: 'elite', name: 'Elite', icon: '🏆', price: 250, dailyRoi: 0.40, color: 'from-red-500 to-rose-600', tier: 'growth' },
+            { id: 'master', name: 'Master', icon: '👑', price: 500, dailyRoi: 0.70, color: 'from-yellow-500 to-amber-600', tier: 'premium' },
+            { id: 'legendary', name: 'Legendary', icon: '🔱', price: 1000, dailyRoi: 0.70, color: 'from-amber-400 to-yellow-500', tier: 'premium' }
+        ];
+
+        // ==================== STATE ====================
+        let currentUser = null;
+        let userData = {};
+        let allUsers = {};
+        let allDeposits = [];
+        let allWithdrawals = [];
+        let allReferrals = [];
+        let globalStats = { totalDeposits: 45280, totalWithdrawals: 28450, activeUsers: 1247, onlineUsers: 247 };
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            renderPlans();
+            updateTicker();
+            setInterval(updateTicker, 5000);
+            setInterval(updateMining, 1000);
+
+            // Check if already logged in
+            const savedUser = localStorage.getItem('herovault_current_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+            }
+        });
+
+        // ==================== STORAGE ====================
+        function loadFromStorage() {
+            const saved = localStorage.getItem('herovault_users');
+            if (saved) allUsers = JSON.parse(saved);
+            const savedDeposits = localStorage.getItem('herovault_deposits');
+            if (savedDeposits) allDeposits = JSON.parse(savedDeposits);
+            const savedWithdrawals = localStorage.getItem('herovault_withdrawals');
+            if (savedWithdrawals) allWithdrawals = JSON.parse(savedWithdrawals);
+            const savedReferrals = localStorage.getItem('herovault_referrals');
+            if (savedReferrals) allReferrals = JSON.parse(savedReferrals);
+            const savedStats = localStorage.getItem('herovault_stats');
+            if (savedStats) globalStats = JSON.parse(savedStats);
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('herovault_users', JSON.stringify(allUsers));
+            localStorage.setItem('herovault_deposits', JSON.stringify(allDeposits));
+            localStorage.setItem('herovault_withdrawals', JSON.stringify(allWithdrawals));
+            localStorage.setItem('herovault_referrals', JSON.stringify(allReferrals));
+            localStorage.setItem('herovault_stats', JSON.stringify(globalStats));
+            if (currentUser) {
+                localStorage.setItem('herovault_current_user', JSON.stringify(currentUser));
+                allUsers[currentUser.email] = userData;
+                localStorage.setItem('herovault_users', JSON.stringify(allUsers));
+            }
+        }
+
+        // ==================== AUTH TABS ====================
+        function switchAuthTab(tab) {
+            document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-3 text-sm font-medium tab-active' : 'flex-1 py-3 text-sm font-medium tab-inactive';
+            document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-3 text-sm font-medium tab-active' : 'flex-1 py-3 text-sm font-medium tab-inactive';
+            document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('signup-error').classList.add('hidden');
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        // ==================== EMAIL AUTH ====================
+        function hashPassword(password) {
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString(16);
+        }
+
+        function handleEmailSignup() {
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim().toLowerCase();
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
+            const errorEl = document.getElementById('signup-error');
+            const successEl = document.getElementById('signup-success');
+
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            if (!name || !email || !password) { errorEl.textContent = 'Please fill all fields'; errorEl.classList.remove('hidden'); return; }
+            if (password.length < 6) { errorEl.textContent = 'Password must be at least 6 characters'; errorEl.classList.remove('hidden'); return; }
+            if (password !== confirm) { errorEl.textContent = 'Passwords do not match'; errorEl.classList.remove('hidden'); return; }
+            if (!email.includes('@')) { errorEl.textContent = 'Please enter a valid email'; errorEl.classList.remove('hidden'); return; }
+            if (allUsers[email]) { errorEl.textContent = 'Email already registered. Please login.'; errorEl.classList.remove('hidden'); return; }
+
+            // Create user
+            allUsers[email] = {
+                name: name,
+                email: email,
+                password: hashPassword(password),
+                balance: 100,
+                avatar: null,
+                investments: [],
+                withdrawals: [],
+                referralCode: generateRefCode(),
+                referrals: [],
+                refEarnings: 0,
+                refBonus: 0,
+                totalDeposited: 0,
+                totalWithdrawn: 0,
+                joinedAt: new Date().toISOString()
+            };
+
+            saveToStorage();
+            successEl.textContent = 'Account created! Please login.';
+            successEl.classList.remove('hidden');
+
+            setTimeout(() => {
+                switchAuthTab('login');
+                document.getElementById('login-email').value = email;
+                successEl.classList.add('hidden');
+            }, 1500);
+        }
+
+        function handleEmailLogin() {
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+
+            errorEl.classList.add('hidden');
+
+            if (!email || !password) { errorEl.textContent = 'Please enter email and password'; errorEl.classList.remove('hidden'); return; }
+
+            const user = allUsers[email];
+            if (!user) { errorEl.textContent = 'Email not found. Please sign up.'; errorEl.classList.remove('hidden'); return; }
+            if (user.password !== hashPassword(password)) { errorEl.textContent = 'Incorrect password'; errorEl.classList.remove('hidden'); return; }
+
+            // Login success
+            currentUser = { name: user.name, email: user.email, picture: user.avatar };
+            userData = user;
+            saveToStorage();
+            showDashboard();
+            showToast('Welcome back, ' + user.name + '!');
+        }
+
+        // ==================== GOOGLE LOGIN ====================
+        function handleGoogleLogin(response) {
+            try {
+                const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                const email = payload.email.toLowerCase();
+
+                // Check if user exists, if not create one
+                if (!allUsers[email]) {
+                    allUsers[email] = {
+                        name: payload.name || email.split('@')[0],
+                        email: email,
+                        password: null, // Google users don't need password
+                        balance: 100,
+                        avatar: payload.picture,
+                        investments: [],
+                        withdrawals: [],
+                        referralCode: generateRefCode(),
+                        referrals: [],
+                        refEarnings: 0,
+                        refBonus: 0,
+                        totalDeposited: 0,
+                        totalWithdrawn: 0,
+                        joinedAt: new Date().toISOString()
+                    };
+                } else {
+                    // Update avatar if changed
+                    if (payload.picture) allUsers[email].avatar = payload.picture;
+                }
+
+                currentUser = { name: payload.name || email.split('@')[0], email: email, picture: payload.picture };
+                userData = allUsers[email];
+                saveToStorage();
+                showDashboard();
+                showToast('Welcome, ' + currentUser.name + '!');
+            } catch (e) {
+                console.error('Google login error:', e);
+                showToast('Login failed. Please try again.');
+            }
+        }
+
+
+
+        // ==================== LOGOUT ====================
+        function logout() {
+            currentUser = null;
+            userData = {};
+            localStorage.removeItem('herovault_current_user');
+            document.getElementById('page-login').classList.remove('hidden');
+            document.getElementById('page-dashboard').classList.add('hidden');
+            document.getElementById('page-owner').classList.add('hidden');
+            document.getElementById('btn-logout').classList.add('hidden');
+            document.getElementById('btn-owner-panel').classList.add('hidden');
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            showToast('Logged out successfully');
+        }
+
+        // ==================== PAGE NAVIGATION ====================
+        function showDashboard() {
+            if (!currentUser) return;
+
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('page-owner').classList.add('hidden');
+            document.getElementById('page-dashboard').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.remove('hidden');
+
+            // Check if owner
+            if (currentUser.email === OWNER_EMAIL) {
+                document.getElementById('btn-owner-panel').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-owner-panel').classList.add('hidden');
+            }
+
+            updateUserDisplay();
+            updateInvestments();
+            updateWithdrawalHistory();
+        }
+
+        function showOwnerPanel() {
+            document.getElementById('page-dashboard').classList.add('hidden');
+            document.getElementById('page-owner').classList.remove('hidden');
+            updateAdminPanel();
+        }
+
+        // ==================== USER DISPLAY ====================
+        function updateUserDisplay() {
+            if (!currentUser || !userData) return;
+
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('user-balance').textContent = '$' + formatMoney(userData.balance);
+
+            const avatarLetter = document.getElementById('user-avatar-letter');
+            const avatarImg = document.getElementById('user-avatar');
+
+            if (currentUser.picture) {
+                avatarImg.src = currentUser.picture;
+                avatarImg.classList.remove('hidden');
+                avatarLetter.classList.add('hidden');
+            } else {
+                avatarLetter.textContent = currentUser.name.charAt(0).toUpperCase();
+                avatarLetter.classList.remove('hidden');
+                avatarImg.classList.add('hidden');
+            }
+
+            // Referral
+            const refLink = window.location.origin + '/herovault/?ref=' + userData.referralCode;
+            document.getElementById('ref-link').value = refLink;
+            document.getElementById('ref-count').textContent = userData.referrals.length;
+            document.getElementById('ref-lifetime').textContent = '$' + formatMoney(userData.refEarnings);
+            document.getElementById('ref-bonus').textContent = '$' + formatMoney(userData.refBonus);
+        }
+
+        // ==================== PLANS ====================
+        function renderPlans() {
+            const grid = document.getElementById('plans-grid');
+            grid.innerHTML = plans.map(plan => `
+                <div class="plan-card glass-card rounded-2xl p-5 plan-item" data-tier="${plan.tier}">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-2xl">${plan.icon}</div>
+                        <div>
+                            <h3 class="font-bold">${plan.name}</h3>
+                            <p class="text-xs text-slate-400">${plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} Tier</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between"><span class="text-sm text-slate-400">Price</span><span class="font-bold text-white">$${plan.price}</span></div>
+                        <div class="flex justify-between"><span class="text-sm text-slate-400">Daily ROI</span><span class="font-bold text-emerald-400">${(plan.dailyRoi * 100).toFixed(0)}%</span></div>
+                        <div class="flex justify-between"><span class="text-sm text-slate-400">Daily Earn</span><span class="font-bold text-amber-400">$${formatMoney(plan.price * plan.dailyRoi)}</span></div>
+                        <div class="flex justify-between"><span class="text-sm text-slate-400">Monthly</span><span class="font-bold text-amber-400">$${formatMoney(plan.price * plan.dailyRoi * 30)}</span></div>
+                    </div>
+                    <button onclick="buyPlan('${plan.id}')" class="w-full btn-primary py-2.5 rounded-xl text-sm font-semibold">Invest $${plan.price}</button>
+                </div>
+            `).join('');
+        }
+
+        function filterPlans(tier) {
+            document.querySelectorAll('.plan-filter').forEach(btn => {
+                if (btn.dataset.filter === tier) {
+                    btn.classList.add('bg-amber-600/20', 'text-amber-400', 'border-amber-500/30');
+                    btn.classList.remove('bg-slate-700/50', 'text-slate-300', 'border-white/10');
+                } else {
+                    btn.classList.remove('bg-amber-600/20', 'text-amber-400', 'border-amber-500/30');
+                    btn.classList.add('bg-slate-700/50', 'text-slate-300', 'border-white/10');
+                }
+            });
+
+            document.querySelectorAll('.plan-item').forEach(card => {
+                card.style.display = (tier === 'all' || card.dataset.tier === tier) ? 'block' : 'none';
+            });
+        }
+
+        // ==================== BUY PLAN ====================
+        function buyPlan(planId) {
+            if (!currentUser) { showToast('Please login first'); return; }
+
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) return;
+
+            if (userData.balance < plan.price) { showToast('Insufficient balance!'); return; }
+
+            userData.balance -= plan.price;
+            userData.totalDeposited += plan.price;
+
+            const investment = {
+                id: Date.now(),
+                planId: plan.id,
+                planName: plan.name,
+                icon: plan.icon,
+                amount: plan.price,
+                dailyRoi: plan.dailyRoi,
+                purchasedAt: new Date().toISOString(),
+                totalEarned: 0,
+                lastClaim: new Date().toISOString()
+            };
+
+            userData.investments.push(investment);
+
+            // Global deposit record
+            allDeposits.push({
+                user: currentUser.name,
+                email: currentUser.email,
+                plan: plan.name,
+                amount: plan.price,
+                roi: (plan.dailyRoi * 100) + '%',
+                date: new Date().toLocaleString(),
+                status: 'Active'
+            });
+
+            globalStats.totalDeposits += plan.price;
+            globalStats.activeUsers = Object.keys(allUsers).length;
+
+            // Referral bonus check
+            checkReferralBonus(plan.price);
+
+            saveToStorage();
+            updateUserDisplay();
+            updateInvestments();
+            updateTicker();
+            showToast('Invested $' + plan.price + ' in ' + plan.name + '!');
+        }
+
+        function checkReferralBonus(amount) {
+            // This would check URL params for ref code in real implementation
+            // For demo, we skip automatic referral tracking
+        }
+
+        // ==================== MINING / EARNINGS ====================
+        function updateMining() {
+            if (!currentUser || !userData || !userData.investments) return;
+
+            const now = new Date();
+            userData.investments.forEach(inv => {
+                const lastClaim = new Date(inv.lastClaim);
+                const hoursPassed = (now - lastClaim) / (1000 * 60 * 60);
+                const earned = inv.amount * inv.dailyRoi * (hoursPassed / 24);
+                inv.totalEarned = earned;
+            });
+
+            updateInvestments();
+        }
+
+        function updateInvestments() {
+            const list = document.getElementById('investments-list');
+            const noInv = document.getElementById('no-investments');
+
+            if (!userData.investments || userData.investments.length === 0) {
+                list.innerHTML = '';
+                noInv.classList.remove('hidden');
+                return;
+            }
+
+            noInv.classList.add('hidden');
+            list.innerHTML = userData.investments.map(inv => {
+                const plan = plans.find(p => p.id === inv.planId);
+                const dailyEarn = inv.amount * inv.dailyRoi;
+                const progress = Math.min((inv.totalEarned / inv.amount) * 100, 100);
+
+                return `
+                    <div class="glass-card rounded-2xl p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="text-3xl">${inv.icon}</div>
+                                <div>
+                                    <h4 class="font-semibold">${inv.planName}</h4>
+                                    <p class="text-xs text-slate-400">Invested: $${inv.amount}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-emerald-400">$${formatMoney(inv.totalEarned)}</div>
+                                <div class="text-xs text-slate-400">earned</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar h-2 mb-3">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="text-xs text-slate-400">
+                                <span class="text-emerald-400 font-medium">$${formatMoney(dailyEarn)}</span> / day
+                                <span class="mx-2">|</span>
+                                <span class="text-amber-400 font-medium">${(inv.dailyRoi * 100).toFixed(0)}%</span> daily ROI
+                            </div>
+                            <button onclick="claimEarnings(${inv.id})" class="px-4 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition text-xs font-medium">
+                                <i class="fas fa-coins mr-1"></i>Claim
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function claimEarnings(invId) {
+            const inv = userData.investments.find(i => i.id === invId);
+            if (!inv || inv.totalEarned <= 0) return;
+
+            const amount = inv.totalEarned;
+            userData.balance += amount;
+            inv.totalEarned = 0;
+            inv.lastClaim = new Date().toISOString();
+
+            saveToStorage();
+            updateUserDisplay();
+            updateInvestments();
+            showToast('Claimed $' + formatMoney(amount) + '!');
+        }
+
+        // ==================== WITHDRAWAL ====================
+        function requestWithdrawal() {
+            if (!currentUser) { showToast('Please login first'); return; }
+
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            if (!amount || amount <= 0) { showToast('Enter a valid amount'); return; }
+            if (amount > userData.balance) { showToast('Insufficient balance'); return; }
+            if (amount < 1) { showToast('Minimum withdrawal is $1'); return; }
+
+            userData.balance -= amount;
+            userData.totalWithdrawn += amount;
+
+            const processingHours = Math.floor(Math.random() * 24) + 1;
+            const withdrawal = {
+                id: Date.now(),
+                user: currentUser.name,
+                email: currentUser.email,
+                amount: amount,
+                requestedAt: new Date().toISOString(),
+                status: 'Pending',
+                processingHours: processingHours,
+                processedAt: null
+            };
+
+            userData.withdrawals.push(withdrawal);
+            allWithdrawals.push(withdrawal);
+            globalStats.totalWithdrawals += amount;
+
+            saveToStorage();
+            updateUserDisplay();
+            updateWithdrawalHistory();
+            updateTicker();
+            document.getElementById('withdraw-amount').value = '';
+            showToast('Withdrawal of $' + formatMoney(amount) + ' requested! Processing in ' + processingHours + 'h');
+        }
+
+        function updateWithdrawalHistory() {
+            const list = document.getElementById('withdrawal-history');
+            const noWd = document.getElementById('no-withdrawals');
+
+            if (!userData.withdrawals || userData.withdrawals.length === 0) {
+                list.innerHTML = '';
+                noWd.classList.remove('hidden');
+                return;
+            }
+
+            noWd.classList.add('hidden');
+            list.innerHTML = userData.withdrawals.slice().reverse().map(wd => {
+                const statusColor = wd.status === 'Completed' ? 'text-emerald-400' : wd.status === 'Pending' ? 'text-amber-400' : 'text-red-400';
+                const statusBg = wd.status === 'Completed' ? 'bg-emerald-600/10' : wd.status === 'Pending' ? 'bg-amber-600/10' : 'bg-red-600/10';
+
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl ${statusBg}">
+                        <div>
+                            <div class="font-medium text-sm">$${formatMoney(wd.amount)}</div>
+                            <div class="text-xs text-slate-500">${new Date(wd.requestedAt).toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-xs font-medium ${statusColor}">${wd.status}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== ADMIN PANEL ====================
+        function updateAdminPanel() {
+            document.getElementById('admin-total-deposits').textContent = '$' + formatMoney(globalStats.totalDeposits);
+            document.getElementById('admin-total-withdrawals').textContent = '$' + formatMoney(globalStats.totalWithdrawals);
+            document.getElementById('admin-active-users').textContent = Object.keys(allUsers).length;
+            document.getElementById('admin-pending').textContent = allWithdrawals.filter(w => w.status === 'Pending').length;
+
+            // Deposits table
+            document.getElementById('admin-deposits-body').innerHTML = allDeposits.slice().reverse().map(d => `
+                <tr class="border-t border-white/5"><td class="px-4 py-3">${d.user}</td><td class="px-4 py-3">${d.plan}</td><td class="px-4 py-3 text-amber-400">$${formatMoney(d.amount)}</td><td class="px-4 py-3">${d.roi}</td><td class="px-4 py-3 text-slate-400">${d.date}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs bg-emerald-600/10 text-emerald-400">${d.status}</span></td></tr>
+            `).join('') || '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No deposits yet</td></tr>';
+
+            // Withdrawals table
+            document.getElementById('admin-withdrawals-body').innerHTML = allWithdrawals.slice().reverse().map(w => `
+                <tr class="border-t border-white/5">
+                    <td class="px-4 py-3">${w.user}</td>
+                    <td class="px-4 py-3 text-amber-400">$${formatMoney(w.amount)}</td>
+                    <td class="px-4 py-3 text-slate-400">${new Date(w.requestedAt).toLocaleString()}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${w.status === 'Pending' ? 'bg-amber-600/10 text-amber-400' : 'bg-emerald-600/10 text-emerald-400'}">${w.status}</span></td>
+                    <td class="px-4 py-3">${w.status === 'Pending' ? `<button onclick="approveWithdrawal(${w.id})" class="px-3 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition text-xs">Approve</button>` : '<span class="text-slate-500 text-xs">Done</span>'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No withdrawals yet</td></tr>';
+
+            // Users table
+            document.getElementById('admin-users-body').innerHTML = Object.values(allUsers).map(u => `
+                <tr class="border-t border-white/5">
+                    <td class="px-4 py-3">${u.name}</td>
+                    <td class="px-4 py-3 text-slate-400">${u.email}</td>
+                    <td class="px-4 py-3 text-amber-400">$${formatMoney(u.totalDeposited)}</td>
+                    <td class="px-4 py-3 text-emerald-400">$${formatMoney(u.refEarnings + u.investments.reduce((a, i) => a + i.totalEarned, 0))}</td>
+                    <td class="px-4 py-3 text-red-400">$${formatMoney(u.totalWithdrawn)}</td>
+                    <td class="px-4 py-3 text-white">$${formatMoney(u.balance)}</td>
+                    <td class="px-4 py-3">${u.investments.length}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">No users yet</td></tr>';
+
+            // Referrals table
+            document.getElementById('admin-referrals-body').innerHTML = allReferrals.slice().reverse().map(r => `
+                <tr class="border-t border-white/5"><td class="px-4 py-3">${r.referrer}</td><td class="px-4 py-3">${r.referred}</td><td class="px-4 py-3 text-amber-400">$${formatMoney(r.invested)}</td><td class="px-4 py-3">10%</td><td class="px-4 py-3">${r.bonus ? '20%' : 'None'}</td><td class="px-4 py-3 text-emerald-400">$${formatMoney(r.totalPaid)}</td></tr>
+            `).join('') || '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No referrals yet</td></tr>';
+        }
+
+        function showAdminTab(tab) {
+            ['deposits', 'withdrawals', 'users', 'referrals'].forEach(t => {
+                document.getElementById('admin-' + t).classList.toggle('hidden', t !== tab);
+                const btn = document.getElementById('admin-tab-' + t);
+                btn.className = t === tab ? 'px-4 py-2 text-sm font-medium tab-active' : 'px-4 py-2 text-sm font-medium tab-inactive';
+            });
+        }
+
+        function approveWithdrawal(id) {
+            const wd = allWithdrawals.find(w => w.id === id);
+            if (wd) {
+                wd.status = 'Completed';
+                wd.processedAt = new Date().toISOString();
+
+                // Update in user data too
+                const user = Object.values(allUsers).find(u => u.email === wd.email);
+                if (user) {
+                    const uwd = user.withdrawals.find(w => w.id === id);
+                    if (uwd) uwd.status = 'Completed';
+                }
+
+                saveToStorage();
+                updateAdminPanel();
+                showToast('Withdrawal approved!');
+            }
+        }
+
+        // ==================== UTILITIES ====================
+        function generateRefCode() {
+            return Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
+
+        function formatMoney(num) {
+            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function copyRefLink() {
+            const input = document.getElementById('ref-link');
+            input.select();
+            document.execCommand('copy');
+            showToast('Referral link copied!');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function updateTicker() {
+            // Simulate live stats
+            globalStats.onlineUsers = Math.floor(Math.random() * 100) + 200;
+            document.getElementById('ticker-online').textContent = globalStats.onlineUsers;
+            document.getElementById('ticker-deposits').textContent = '$' + formatMoney(globalStats.totalDeposits);
+            document.getElementById('ticker-withdrawals').textContent = '$' + formatMoney(globalStats.totalWithdrawals);
+            document.getElementById('ticker-users').textContent = globalStats.activeUsers.toLocaleString();
+
+            const days = Math.floor((new Date() - START_DATE) / (1000 * 60 * 60 * 24));
+            document.getElementById('ticker-days').textContent = days + ' Days';
+        }
+
+        // ==================== REFERRAL FROM URL ====================
+        (function checkUrlRef() {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref');
+            if (ref) {
+                localStorage.setItem('herovault_ref_code', ref);
+            }
+        })();
+    </script>
+</body>
+</html>
